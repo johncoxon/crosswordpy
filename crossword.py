@@ -1,6 +1,6 @@
+#!/usr/bin/env python
+# encoding: utf-8
 """
-crossword
-
 A module which, on import, yields functions for automatically printing the Guardian crossword.
 Based on a Python script written by Jonny Nichols (University of Leicester) in the dim past.
 
@@ -8,15 +8,16 @@ Author:	John Coxon, Space Environment Physics group, University of Southampton
 Date:	2015/02/27
 """
 
-#!/usr/bin/env python
-# encoding: utf-8
-
 import datetime, inspect, os, urllib2
 
+#---------------------------------------------------------------------------------------------------
+
 def get_saturday_xword_no():
-	# Gets the number of last Saturday's crossword based on specified epoch.
-	# Epoch tends to become 1 out around Christmastime, so needs updated annually.
-	# Current epoch definition: 13,974 occurred on 2015-02-21.
+	"""
+	Gets the number of last Saturday's crossword based on specified epoch.
+	Epoch tends to become 1 out around Christmastime, so needs to be updated annually.
+	Current epoch definition: 13,974 occurred on 2015-02-21.
+	"""
 	
 	# Get the current date and day of week.
 	today = datetime.date.today()
@@ -39,23 +40,38 @@ def get_saturday_xword_no():
 #---------------------------------------------------------------------------------------------------
 
 def next_xword_no(user):
+	"""
+	Get the next number needed for the crossword.
+
+	INPUTS
+		user: The username for which the directory should be inspected.
+	"""
 
 	# Get the list of files from the archive directory and sort them.
 	files = os.listdir(os.path.dirname(inspect.getfile(inspect.currentframe())) + '/archive')
 	files.sort()
 	
-	# Get the number of files and then select the last file in the list.
-	xwordno = files[-1]
-	
-	# Get the start of the filename and add 1 to get the next crossword desired.
-	xwordno = int(xwordno[:5]) + 1
-	
+	try:
+		# Get the number of files and then select the last file in the list.
+		xwordno = files[-1]
+
+		# Get the start of the filename and add 1 to get the next crossword desired.
+		xwordno = int(xwordno[:5]) + 1		
+	except IndexError:
+		# If this does not work, 12395 is the first crossword for which there is a PDF.
+		xwordno = 12395
+		
 	return xwordno
 
 #---------------------------------------------------------------------------------------------------
 
-def get_xword_html(xwordno = 0):
-	# Gets the Quick Crossword HTML from URL (from the crossword number if specified).
+def get_xword_url(xwordno = 0):
+	"""
+	Gets the Quick Crossword URL from the HTML (from the crossword number if specified).
+
+	OPTIONAL INPUTS
+		xwordno: The crossword number to get the URL from.
+	"""
 	
 	if xwordno != 0:
 		url = 'http://www.theguardian.com/crosswords/quick/' + str(xwordno)
@@ -66,31 +82,40 @@ def get_xword_html(xwordno = 0):
 	response = urllib2.urlopen(url)
 	html = response.read()
 	
-	return html	
-
-#---------------------------------------------------------------------------------------------------
-
-def extract_pdf_url(html):
-	# Get the URL for the PDF from the HTML input.
-	
 	searchstr = '>PDF'
 	loc = html.find(searchstr)
 	urlstr = html[loc-80:loc]
 	
 	strsplit = urlstr.split('"')
 	
+	foundURL = False
+
 	for substr in strsplit: 
-		
 		if substr[0] == 'h':
 			pdfurl = substr
+			foundURL = True
 			break
 
-	return pdfurl
+	if (foundURL == False) & (xwordno != 0):
+		pdfurl, actualxwordno = get_xword_url(xwordno = xwordno + 1)
+	else:
+		actualxwordno = xwordno
+
+	return pdfurl, actualxwordno
 
 #---------------------------------------------------------------------------------------------------
 
 def download_pdf(pdfurl, saturday = False, archive = False):
-	# Download the PDF and save to a local file.
+	"""
+	Download the PDF and save to a local file.
+
+	INPUTS
+		pdfurl: The URL to download from.
+
+	OPTIONAL INPUTS
+		saturday: Set this to download the Saturday crossword.
+		archive: Set this to download an old crossword.
+	"""
 	
 	response = urllib2.urlopen(pdfurl)
 	if saturday != False:
@@ -109,7 +134,12 @@ def download_pdf(pdfurl, saturday = False, archive = False):
 #---------------------------------------------------------------------------------------------------
 	
 def crop_pdf(pdffile):
-	# Crop the local PDF file to remove the large margins.
+	"""
+	Crop the local PDF file to remove the large margins.
+
+	INPUTS
+		pdffile: The PDF file to be cropped.
+	"""
 	
 	os.popen('pdfcrop --margins 10 ' + pdffile)
 	os.popen('gs -o ' + os.path.splitext(pdffile)[0] + '-cropped.pdf -sDEVICE=pdfwrite -sPAPERSIZE=a4 -dFIXEDMEDIA -dPDFFitPage -dCompatibilityLevel=1.4 ' + os.path.splitext(pdffile)[0] + '-crop.pdf')
@@ -122,7 +152,15 @@ def crop_pdf(pdffile):
 #---------------------------------------------------------------------------------------------------
 
 def print_pdf(pdffile, landscape = False):
-	# Print the local PDF file to the relevant printer.
+	"""
+	Print the local PDF file to the relevant printer.
+
+	INPUTS
+		pdffile: The file to be printed.
+
+	OPTIONAL INPUTS
+		landscape: Set this True to print the crossword in landscape.
+	"""
 	
 	printcmd = 'lp -n 2 '
 	if landscape == True: printcmd = printcmd + '-o landscape '
@@ -133,7 +171,12 @@ def print_pdf(pdffile, landscape = False):
 #---------------------------------------------------------------------------------------------------
 
 def delete_pdf(pdffile):
-	# Delete the original PDF file and just keep the cropped one.
+	"""
+	Deletes the original PDF file and just keep the cropped one.
+
+	INPUTS
+		pdffile: The file to be deleted, alongside the associated -crop.pdf file.
+	"""
 	
 	os.popen('rm ' + pdffile)
 	os.popen('rm ' + os.path.splitext(pdffile)[0] + '-crop.pdf')
@@ -142,40 +185,66 @@ def delete_pdf(pdffile):
 #---------------------------------------------------------------------------------------------------
 
 def today():
-	# Downloads and prints the (cropped) PDF of today's Quick Crossword.
-	
-	xwordhtml = get_xword_html()
-	pdfurl = extract_pdf_url(xwordhtml)
+	"""
+	Downloads and prints the (cropped) PDF of today's Quick Crossword.
+	"""
+
+	# Get the PDF, download it and crop it.
+	pdfurl, _ = get_xword_url()
 	pdffile = download_pdf(pdfurl)
 	pdfcropped = crop_pdf(pdffile)
+
+	# Print it, delete the extraneous bits.	
 	printpdf = print_pdf(pdfcropped)
 	deletepdf = delete_pdf(pdffile)
 	
 #---------------------------------------------------------------------------------------------------
 
 def saturday():
-	# Downloads and prints the (cropped) PDF of Saturday's Quick Crossword.
-		
+	"""
+	Downloads and prints the (cropped) PDF of Saturday's Quick Crossword.
+	"""
+	
+	# Get the PDF, download it and crop it.
 	xwordno = get_saturday_xword_no()
-	xwordhtml = get_xword_html(xwordno = xwordno)
-	pdfurl = extract_pdf_url(xwordhtml)
+	pdfurl, _ = get_xword_url(xwordno = xwordno)
 	pdffile = download_pdf(pdfurl, saturday = True)
 	pdfcropped = crop_pdf(pdffile)
+	
+	# Print it, delete the extraneous bits.
 	printpdf = print_pdf(pdfcropped, landscape = True)
 	deletepdf = delete_pdf(pdffile)
 
 #---------------------------------------------------------------------------------------------------
 
-def archive(xwordno = 0):
-	# Downloads and prints the (cropped) PDF of an old Quick Crossword.
-	
+def archive(xwordno = 0, PyPDF2 = True):
+	"""
+	Downloads and prints the (cropped) PDF of an old Quick Crossword.
+
+	OPTIONAL INPUTS
+		xwordno: Set this to print a specific crossword number.
+		PyPDF2: Set this to False to avoid the PyPDF2 dependency. This will mean that some
+			crosswords are the wrong way around, regrettably, depending on epoch definition.
+	"""
+
+	# Get the next PDF, download it and crop it.
 	if xwordno == 0: xwordno = next_xword_no('jc3e14')
-	xwordhtml = get_xword_html(xwordno = xwordno)
-	pdfurl = extract_pdf_url(xwordhtml)
-	pdffile = download_pdf(pdfurl, archive = xwordno)
+	pdfurl, actualxwordno = get_xword_url(xwordno = xwordno)
+	pdffile = download_pdf(pdfurl, archive = actualxwordno)
 	pdfcropped = crop_pdf(pdffile)
-	if (int(xwordno) - 12394) % 6 == 0:
-		printpdf = print_pdf(pdfcropped, landscape = True)
+
+	# Work out whether the resulting file is landscape.
+	if PyPDF2 == True:
+		import PyPDF2
+		pdf = PyPDF2.PdfFileReader(pdfcropped)
+		page = pdf.getPage(0)
+		landscape = (('/Rotate', 90) in page.items())
 	else:
-		printpdf = print_pdf(pdfcropped)
+		if (int(xwordno) - 12394) % 6 == 0:	
+			landscape = True
+		else:
+			landscape = False
+	
+	# Print it, delete the extraneous bits.
+	printpdf = print_pdf(pdfcropped, landscape = landscape)
 	deletepdf = delete_pdf(pdffile)

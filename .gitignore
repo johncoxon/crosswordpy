@@ -2,7 +2,7 @@
 .DS_Store
 
 # PDFs
-.pdf
+*.pdf
 
 # Byte-compiled / optimized / DLL files
 __pycache__/

@@ -8,7 +8,37 @@ Author:	John Coxon, Space Environment Physics group, University of Southampton
 Date:	2015/02/27
 """
 
-import datetime, inspect, os, urllib2
+import datetime, inspect, os, urllib2, ConfigParser
+
+config = ConfigParser.SafeConfigParser()
+read = config.read('preferences.cfg')
+
+if read == []:
+	config.add_section('Printing')
+	printerName = raw_input('What is the name of the printer you will be using? ')
+	config.set('Printing', 'Name', printerName)
+
+	# Save the preferences back to a file.
+	with open(os.path.dirname(__file__) + '/preferences.cfg', 'wb') as preferences:
+		config.write(preferences)
+
+printer = config.get('Printing', 'Name')
+
+#---------------------------------------------------------------------------------------------------
+
+def preferences(printerName):
+	"""
+
+	"""
+	config = ConfigParser.SafeConfigParser()
+	config.add_section('Printing')
+
+	# Set the printer name.
+	config.set('Printing', 'Name', printerName)
+
+	# Save the preferences back to a file.
+	with open(os.path.dirname(__file__) + '/preferences.cfg', 'wb') as preferences:
+		config.write(preferences)
 
 #---------------------------------------------------------------------------------------------------
 
@@ -57,7 +87,7 @@ def next_xword_no(user):
 
 		# Get the start of the filename and add 1 to get the next crossword desired.
 		xwordno = int(xwordno[:5]) + 1		
-	except IndexError:
+	except:
 		# If this does not work, 12395 is the first crossword for which there is a PDF.
 		xwordno = 12395
 		
@@ -135,14 +165,16 @@ def download_pdf(pdfurl, saturday = False, archive = False):
 	
 def crop_pdf(pdffile):
 	"""
-	Crop the local PDF file to remove the large margins.
+	Crop the local PDF file to remove the large margins, using pdfcrop and ghostscript.
 
 	INPUTS
 		pdffile: The PDF file to be cropped.
 	"""
 	
 	os.popen('pdfcrop --margins 10 ' + pdffile)
-	os.popen('gs -o ' + os.path.splitext(pdffile)[0] + '-cropped.pdf -sDEVICE=pdfwrite -sPAPERSIZE=a4 -dFIXEDMEDIA -dPDFFitPage -dCompatibilityLevel=1.4 ' + os.path.splitext(pdffile)[0] + '-crop.pdf')
+
+	gsParams = ' -sDEVICE=pdfwrite -sPAPERSIZE=a4 -dFIXEDMEDIA -dPDFFitPage -dCompatibilityLevel=1.4 '
+	os.popen('gs -o ' + os.path.splitext(pdffile)[0] + '-cropped.pdf' + gsParams + os.path.splitext(pdffile)[0] + '-crop.pdf')
 	
 	pdfcropped = os.path.splitext(pdffile)[0] + '-cropped.pdf'
 	
@@ -164,7 +196,7 @@ def print_pdf(pdffile, landscape = False):
 	
 	printcmd = 'lp -n 2 '
 	if landscape == True: printcmd = printcmd + '-o landscape '
-	printcmd = printcmd + '-dBlack_and_White_on_staff_printing_soton_ac_uk ' + pdffile
+	printcmd = printcmd + '-d' + crossword.printer + ' ' + pdffile
 	os.popen(printcmd)
 	return 1
 

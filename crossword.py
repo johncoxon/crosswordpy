@@ -8,37 +8,60 @@ Author:	John Coxon, Space Environment Physics group, University of Southampton
 Date:	2015/02/27
 """
 
-import datetime, inspect, os, urllib2, ConfigParser
+import datetime, inspect, os, urllib2, ConfigParser, crossword as cw
 
 config = ConfigParser.SafeConfigParser()
-read = config.read('preferences.cfg')
+read = config.read(os.path.dirname(__file__) + '/preferences.cfg')
 
 if read == []:
-	config.add_section('Printing')
+	# Ask the user to set up the preferences.
 	printerName = raw_input('What is the name of the printer you will be using? ')
-	config.set('Printing', 'Name', printerName)
+	username = raw_input('What is your username on this computer? ')
+	cw.preferences(printerName, username)
 
-	# Save the preferences back to a file.
-	with open(os.path.dirname(__file__) + '/preferences.cfg', 'wb') as preferences:
-		config.write(preferences)
+# Read the values back out of the config file.
+printer = config.get('Printer', 'Name')
+username = config.get('Installation', 'Username')
 
-printer = config.get('Printing', 'Name')
+try:
+	fitplot = bool(config.get('Printer', 'fitplot'))
+	ghostscript = bool(config.get('Dependencies', 'ghostscript'))
+	pdfcrop = bool(config.get('Dependencies', 'pdfcrop'))
+	PyPDF2 = bool(config.get('Dependencies', 'PyPDF2'))
+except:
+	cw.preferences(printer, username)
 
 #---------------------------------------------------------------------------------------------------
 
-def preferences(printerName):
+def preferences(printerName, username, fitplot = True, ghostscript = True, pdfcrop = True, PyPDF2 = True):
 	"""
 
 	"""
 	config = ConfigParser.SafeConfigParser()
-	config.add_section('Printing')
 
-	# Set the printer name.
-	config.set('Printing', 'Name', printerName)
+	# Set up the printer preferences.
+	config.add_section('Printer')
+	config.set('Printer', 'Name', printerName)
+	config.set('Printer', 'fitplot', str(fitplot))
+
+	config.add_section('Dependencies')
+	config.set('Dependencies', 'ghostscript', str(ghostscript))
+	config.set('Dependencies', 'pdfcrop', str(pdfcrop))
+	config.set('Dependencies', 'PyPDF2', str(PyPDF2))
+
+	config.add_section('Installation')
+	config.set('Installation', 'Username', username)
 
 	# Save the preferences back to a file.
 	with open(os.path.dirname(__file__) + '/preferences.cfg', 'wb') as preferences:
 		config.write(preferences)
+
+	cw.fitplot = fitplot
+	cw.ghostscript = ghostscript
+	cw.pdfcrop = pdfcrop
+	cw.PyPDF2 = PyPDF2
+	cw.printer = printerName
+	cw.username = username
 
 #---------------------------------------------------------------------------------------------------
 
@@ -163,7 +186,7 @@ def download_pdf(pdfurl, saturday = False, archive = False):
 
 #---------------------------------------------------------------------------------------------------
 	
-def crop_pdf(pdffile):
+def crop_pdf(pdffile, pdfcrop = True, ghostscript = True):
 	"""
 	Crop the local PDF file to remove the large margins, using pdfcrop and ghostscript.
 
@@ -171,19 +194,31 @@ def crop_pdf(pdffile):
 		pdffile: The PDF file to be cropped.
 	"""
 	
-	os.popen('pdfcrop --margins 10 ' + pdffile)
+	# Get just the path and basename, not the extension.
+	filename = os.path.splitext(pdffile)[0]
 
-	gsParams = ' -sDEVICE=pdfwrite -sPAPERSIZE=a4 -dFIXEDMEDIA -dPDFFitPage -dCompatibilityLevel=1.4 '
-	os.popen('gs -o ' + os.path.splitext(pdffile)[0] + '-cropped.pdf' + gsParams + os.path.splitext(pdffile)[0] + '-crop.pdf')
+	# Crop the pdf.
+	if pdfcrop == True:
+		os.popen('pdfcrop --margins 10 {0}'.format(pdffile))
+	else:
+		os.popen('cp {0} {1}-crop.pdf'.format(pdffile, filename))
+
+	# Expand the PDF to an A4 page.
+	if ghostscript == True:
+		gsParams = '-sDEVICE=pdfwrite -sPAPERSIZE=a4 -dFIXEDMEDIA -dPDFFitPage -dCompatibilityLevel=1.4'
+		os.popen('gs -o {0}-cropped.pdf {1} {0}-crop.pdf'.format(filename, gsParams))
+	else:
+		os.popen('cp {0}-crop.pdf {0}-cropped.pdf'.format(filename))
 	
-	pdfcropped = os.path.splitext(pdffile)[0] + '-cropped.pdf'
+	# Return the new filename.
+	pdfcropped = '{0}-cropped.pdf'.format(filename)
 	
 	print pdfcropped
 	return pdfcropped
 	
 #---------------------------------------------------------------------------------------------------
 
-def print_pdf(pdffile, landscape = False):
+def print_pdf(pdffile, landscape = False, fitplot = True):
 	"""
 	Print the local PDF file to the relevant printer.
 
@@ -195,8 +230,12 @@ def print_pdf(pdffile, landscape = False):
 	"""
 	
 	printcmd = 'lp -n 2 '
-	if landscape == True: printcmd = printcmd + '-o landscape '
-	printcmd = printcmd + '-d' + crossword.printer + ' ' + pdffile
+	if fitplot == True:
+		printcmd += '-o fitplot '
+	if landscape == True:
+		printcmd += '-o landscape '
+	printcmd += '-d{0} {1}'.format(crossword.printer, pdffile)
+	
 	os.popen(printcmd)
 	return 1
 
@@ -210,8 +249,8 @@ def delete_pdf(pdffile):
 		pdffile: The file to be deleted, alongside the associated -crop.pdf file.
 	"""
 	
-	os.popen('rm ' + pdffile)
-	os.popen('rm ' + os.path.splitext(pdffile)[0] + '-crop.pdf')
+	os.popen('rm {0}'.format(pdffile))
+	os.popen('rm {0}-crop.pdf'.format(os.path.splitext(pdffile)[0]))
 	return 1
 
 #---------------------------------------------------------------------------------------------------
@@ -249,7 +288,7 @@ def saturday():
 
 #---------------------------------------------------------------------------------------------------
 
-def archive(xwordno = 0, PyPDF2 = True):
+def archive(xwordno = 0):
 	"""
 	Downloads and prints the (cropped) PDF of an old Quick Crossword.
 
@@ -260,13 +299,13 @@ def archive(xwordno = 0, PyPDF2 = True):
 	"""
 
 	# Get the next PDF, download it and crop it.
-	if xwordno == 0: xwordno = next_xword_no('jc3e14')
+	if xwordno == 0: xwordno = next_xword_no(cw.username)
 	pdfurl, actualxwordno = get_xword_url(xwordno = xwordno)
 	pdffile = download_pdf(pdfurl, archive = actualxwordno)
-	pdfcropped = crop_pdf(pdffile)
+	pdfcropped = crop_pdf(pdffile, pdfcrop = cw.pdfcrop, ghostscript = cw.ghostscript)
 
 	# Work out whether the resulting file is landscape.
-	if PyPDF2 == True:
+	if cw.PyPDF2 == True:
 		import PyPDF2
 		pdf = PyPDF2.PdfFileReader(pdfcropped)
 		page = pdf.getPage(0)
@@ -278,5 +317,5 @@ def archive(xwordno = 0, PyPDF2 = True):
 			landscape = False
 	
 	# Print it, delete the extraneous bits.
-	printpdf = print_pdf(pdfcropped, landscape = landscape)
+	printpdf = print_pdf(pdfcropped, landscape = landscape, fitplot = cw.fitplot)
 	deletepdf = delete_pdf(pdffile)

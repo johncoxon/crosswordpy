@@ -35,8 +35,10 @@ except:
 
 def preferences(printerName, username, fitplot = True, ghostscript = True, pdfcrop = True, PyPDF2 = True):
 	"""
-
+	Saves user preferences connected to dependencies, the name and features of the desired printer,
+	and the username of the user (for use in recording crossword progress).
 	"""
+
 	config = ConfigParser.SafeConfigParser()
 
 	# Set up the printer preferences.
@@ -67,27 +69,30 @@ def preferences(printerName, username, fitplot = True, ghostscript = True, pdfcr
 
 def get_saturday_xword_no():
 	"""
-	Gets the number of last Saturday's crossword based on specified epoch.
-	Epoch tends to become 1 out around Christmastime, so needs to be updated annually.
-	Current epoch definition: 13,974 occurred on 2015-02-21.
+	Gets the number of last Saturday's crossword by getting today's number and subtracting.
+	Takes account of situations in which Christmas Day will screw up the mathematics.
 	"""
 	
 	# Get the current date and day of week.
 	today = datetime.date.today()
 	weekday = today.weekday()
-	
-	# Make delta T the number of days since last Saturday and subtract to get that date.
-	difference = datetime.timedelta(weekday + 2)
-	satdate = today - difference
-	
-	# Tell Python the epoch date.
-	epoch = datetime.date(2015,2,21)
-	
-	# Get the difference between epoch and last Saturday, then calculate crossword number.
-	epochdelta = satdate - epoch
-	xwordno = ((epochdelta.days / 7.0) * 6.0) + 13974
-	xwordno = int(xwordno)
-	
+
+	# Get the date on Saturday.
+	saturday = today - datetime.timedelta(weekday + 2)
+
+	# Get today's crossword number.
+	_, todayxwordno = get_xword_url()
+
+	# Get Christmas Day as a datetime object.
+	xmas = dt.date(saturday.year, 12, 25))
+
+	# Subract to get Saturday's crossword number.
+	# If the two are on opposite sides of Christmas Day, subtract one less from today's xwordno.
+	if (today > xmas) & (saturday < xmas) & (xmas.weekday() != 6):
+		xwordno = todayxwordno - weekday
+	else:		
+		xwordno = todayxwordno - (weekday + 1)
+
 	return xwordno
 	
 #---------------------------------------------------------------------------------------------------
@@ -149,7 +154,12 @@ def get_xword_url(xwordno = 0):
 			foundURL = True
 			break
 
-	if (foundURL == False) & (xwordno != 0):
+	if xwordno == 0:
+		searchstr2 = 'http://www.theguardian.com/crosswords/quick/'
+		loc2 = html.find(searchstr2)
+		loc2 += len(searchstr2)
+		actualxwordno = int(html[loc2:loc2 + 5])
+	elif foundURL == False:
 		pdfurl, actualxwordno = get_xword_url(xwordno = xwordno + 1)
 	else:
 		actualxwordno = xwordno
@@ -228,13 +238,13 @@ def print_pdf(pdffile, landscape = False, fitplot = True):
 	OPTIONAL INPUTS
 		landscape: Set this True to print the crossword in landscape.
 	"""
-	
+
 	printcmd = 'lp -n 2 '
 	if fitplot == True:
 		printcmd += '-o fitplot '
 	if landscape == True:
 		printcmd += '-o landscape '
-	printcmd += '-d{0} {1}'.format(crossword.printer, pdffile)
+	printcmd += '-d{0} {1}'.format(cw.printer, pdffile)
 	
 	os.popen(printcmd)
 	return 1

@@ -84,7 +84,7 @@ def get_saturday_xword_no():
 	_, todayxwordno = get_xword_url()
 
 	# Get Christmas Day as a datetime object.
-	xmas = dt.date(saturday.year, 12, 25))
+	xmas = datetime.date(saturday.year, 12, 25)
 
 	# Subract to get Saturday's crossword number.
 	# If the two are on opposite sides of Christmas Day, subtract one less from today's xwordno.
@@ -236,16 +236,17 @@ def print_pdf(pdffile, landscape = False, fitplot = True):
 		pdffile: The file to be printed.
 
 	OPTIONAL INPUTS
-		landscape: Set this True to print the crossword in landscape.
+		landscape: Set this True to print the crossword in landscape (rotated 90 degrees).
+		fitplot: Set this to have the printer scale the file to the paper size.
 	"""
-
+	
 	printcmd = 'lp -n 2 '
 	if fitplot == True:
 		printcmd += '-o fitplot '
 	if landscape == True:
 		printcmd += '-o landscape '
 	printcmd += '-d{0} {1}'.format(cw.printer, pdffile)
-	
+
 	os.popen(printcmd)
 	return 1
 
@@ -273,10 +274,10 @@ def today():
 	# Get the PDF, download it and crop it.
 	pdfurl, _ = get_xword_url()
 	pdffile = download_pdf(pdfurl)
-	pdfcropped = crop_pdf(pdffile)
+	pdfcropped = crop_pdf(pdffile, pdfcrop = cw.pdfcrop, ghostscript = cw.ghostscript)
 
 	# Print it, delete the extraneous bits.	
-	printpdf = print_pdf(pdfcropped)
+	printpdf = print_pdf(pdfcropped, fitplot = cw.fitplot)
 	deletepdf = delete_pdf(pdffile)
 	
 #---------------------------------------------------------------------------------------------------
@@ -290,10 +291,15 @@ def saturday():
 	xwordno = get_saturday_xword_no()
 	pdfurl, _ = get_xword_url(xwordno = xwordno)
 	pdffile = download_pdf(pdfurl, saturday = True)
-	pdfcropped = crop_pdf(pdffile)
+	pdfcropped = crop_pdf(pdffile, pdfcrop = cw.pdfcrop, ghostscript = cw.ghostscript)
 	
 	# Print it, delete the extraneous bits.
-	printpdf = print_pdf(pdfcropped, landscape = True)
+	if cw.ghostscript == True:
+		landscape = False
+	else:
+		landscape = True
+
+	printpdf = print_pdf(pdfcropped, landscape = landscape, fitplot = cw.fitplot)
 	deletepdf = delete_pdf(pdffile)
 
 #---------------------------------------------------------------------------------------------------
@@ -304,8 +310,6 @@ def archive(xwordno = 0):
 
 	OPTIONAL INPUTS
 		xwordno: Set this to print a specific crossword number.
-		PyPDF2: Set this to False to avoid the PyPDF2 dependency. This will mean that some
-			crosswords are the wrong way around, regrettably, depending on epoch definition.
 	"""
 
 	# Get the next PDF, download it and crop it.
@@ -314,17 +318,13 @@ def archive(xwordno = 0):
 	pdffile = download_pdf(pdfurl, archive = actualxwordno)
 	pdfcropped = crop_pdf(pdffile, pdfcrop = cw.pdfcrop, ghostscript = cw.ghostscript)
 
-	# Work out whether the resulting file is landscape.
-	if cw.PyPDF2 == True:
-		import PyPDF2
-		pdf = PyPDF2.PdfFileReader(pdfcropped)
-		page = pdf.getPage(0)
-		landscape = (('/Rotate', 90) in page.items())
+	# Work out whether the resulting file is landscape, set options accordingly.
+	# If we use ghostscript, it'll set the file rotation to 90 automatically, so the landscape
+	# keyword can be left alone; if not, use a crude method to determine landscapeness.
+	if (cw.ghostscript == False) & ((int(xwordno) - 12394) % 6 == 0):
+		landscape = True
 	else:
-		if (int(xwordno) - 12394) % 6 == 0:	
-			landscape = True
-		else:
-			landscape = False
+		landscape = False
 	
 	# Print it, delete the extraneous bits.
 	printpdf = print_pdf(pdfcropped, landscape = landscape, fitplot = cw.fitplot)

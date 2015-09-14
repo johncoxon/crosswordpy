@@ -137,12 +137,20 @@ def get_xword_url(xwordno = 0):
 	else:
 		url = 'http://www.theguardian.com/crossword/quick/'
 	
-	response = urllib2.urlopen(url)
+	try:
+		response = urllib2.urlopen(url)
+	except urllib2.HTTPError:
+		print('Error when accessing: ' + url)
+		raise
+
 	html = response.read()
 	
 	searchstr = '>PDF'
 	loc = html.find(searchstr)
-	urlstr = html[loc-80:loc]
+	if loc != -1:
+		urlstr = html[loc-80:loc]
+	else:
+		raise StandardError('No PDF was found in the HTML of the page.')
 	
 	strsplit = urlstr.split('"')
 	

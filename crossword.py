@@ -130,13 +130,24 @@ def get_xword_url(xwordno = 0):
 	OPTIONAL INPUTS
 		xwordno: The crossword number to get the URL from.
 	"""
-	
-	if xwordno != 0:
-		url = 'http://www.theguardian.com/crosswords/quick/' + str(xwordno)
-		print url
-	else:
-		url = 'http://www.theguardian.com/crossword/quick/'
-	
+
+	if xwordno == 0:
+		cw_url = 'http://www.theguardian.com/crosswords/'
+		try:
+			response = urllib2.urlopen(cw_url)
+		except urllib2.HTTPError:
+			print('Error when accessing: ' + cw_url)
+			raise
+		cw_html = response.read()
+		cw_search = 'http://www.theguardian.com/crosswords/quick/'
+		cw_loc = html.find(qcw_search) + len(qcw_search)
+		if cw_loc != -1:
+			xwordno = int(cw_html[cw_loc:cw_loc+5])
+			actualxwordno = xwordno
+
+	url = 'http://www.theguardian.com/crosswords/quick/' + str(xwordno)
+	print url
+
 	try:
 		response = urllib2.urlopen(url)
 	except urllib2.HTTPError:
@@ -145,14 +156,14 @@ def get_xword_url(xwordno = 0):
 
 	html = response.read()
 	
-	searchstr = '>PDF'
-	loc = html.find(searchstr)
-	if loc != -1:
-		urlstr = html[loc-80:loc]
+	pdf_search = '>PDF'
+	pdf_loc = html.find(pdf_search)
+	if pdf_loc != -1:
+		pdf_url_str = html[pdf_loc-80:pdf_loc]
 	else:
 		raise StandardError('No PDF was found in the HTML of the page.')
 	
-	strsplit = urlstr.split('"')
+	strsplit = pdf_url_str.split('"')
 	
 	foundURL = False
 
@@ -162,12 +173,7 @@ def get_xword_url(xwordno = 0):
 			foundURL = True
 			break
 
-	if xwordno == 0:
-		searchstr2 = 'http://www.theguardian.com/crosswords/quick/'
-		loc2 = html.find(searchstr2)
-		loc2 += len(searchstr2)
-		actualxwordno = int(html[loc2:loc2 + 5])
-	elif foundURL == False:
+	if foundURL == False:
 		pdfurl, actualxwordno = get_xword_url(xwordno = xwordno + 1)
 	else:
 		actualxwordno = xwordno

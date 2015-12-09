@@ -10,30 +10,13 @@ Date:	2015/02/27
 
 import datetime, inspect, os, urllib2, ConfigParser, crossword as cw
 
-config = ConfigParser.SafeConfigParser()
-read = config.read(os.path.dirname(__file__) + '/preferences.cfg')
-
-if read == []:
-	# Ask the user to set up the preferences.
-	printerName = raw_input('What is the name of the printer you will be using? ')
-	username = raw_input('What is your username on this computer? ')
-	cw.preferences(printerName, username)
-
-# Read the values back out of the config file.
-printer = config.get('Printer', 'Name')
-username = config.get('Installation', 'Username')
-
-try:
-	fitplot = bool(config.get('Printer', 'fitplot'))
-	ghostscript = bool(config.get('Dependencies', 'ghostscript'))
-	pdfcrop = bool(config.get('Dependencies', 'pdfcrop'))
-	PyPDF2 = bool(config.get('Dependencies', 'PyPDF2'))
-except:
-	cw.preferences(printer, username)
+# Note that there is code at the bottom of this file, after the functions are defined, which runs
+# upon the module being imported.
 
 #---------------------------------------------------------------------------------------------------
 
-def preferences(printerName, username, fitplot = True, ghostscript = True, pdfcrop = True, PyPDF2 = True):
+def preferences(printerName, username, fitplot = True, ghostscript = True, pdfcrop = True,
+	PyPDF2 = True):
 	"""
 	Saves user preferences connected to dependencies, the name and features of the desired printer,
 	and the username of the user (for use in recording crossword progress).
@@ -145,7 +128,7 @@ def get_xword_url(xwordno = 0):
 			raise
 		cw_html = response.read()
 		cw_search = 'http://www.theguardian.com/crosswords/quick/'
-		cw_loc = html.find(qcw_search) + len(qcw_search)
+		cw_loc = cw_html.find(cw_search) + len(cw_search)
 		if cw_loc != -1:
 			xwordno = int(cw_html[cw_loc:cw_loc+5])
 			actualxwordno = xwordno
@@ -348,3 +331,29 @@ def archive(xwordno = 0):
 	# Print it, delete the extraneous bits.
 	printpdf = print_pdf(pdfcropped, landscape = landscape, fitplot = cw.fitplot)
 	deletepdf = delete_pdf(pdffile)
+
+#---------------------------------------------------------------------------------------------------
+
+# This stuff is at the bottom bceause it needs to run on import but after the functions have been
+# defined so that the preferences function can be called.
+
+config = ConfigParser.SafeConfigParser()
+read = config.read(os.path.dirname(__file__) + '/preferences.cfg')
+
+if read == []:
+	# Ask the user to set up the preferences.
+	printerName = raw_input('What is the name of the printer you will be using? ')
+	username = raw_input('What is your username on this computer? ')
+	cw.preferences(printerName, username)
+
+# Read the values back out of the config file.
+printer = config.get('Printer', 'Name')
+username = config.get('Installation', 'Username')
+
+try:
+	fitplot = bool(config.get('Printer', 'fitplot'))
+	ghostscript = bool(config.get('Dependencies', 'ghostscript'))
+	pdfcrop = bool(config.get('Dependencies', 'pdfcrop'))
+	PyPDF2 = bool(config.get('Dependencies', 'PyPDF2'))
+except:
+	cw.preferences(printer, username)

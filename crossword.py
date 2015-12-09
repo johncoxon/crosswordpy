@@ -38,13 +38,8 @@ def preferences(printerName, username, fitplot = True, ghostscript = True, pdfcr
 	config.set('Installation', 'Username', username)
 
 	# Save the preferences back to a file.
-	# This is done in a somewhat archaic way because ion doesn't have Python 2.5+...
-	prefs_file = open(os.path.dirname(__file__) + '/preferences.cfg', 'wb')
-
-	try:
+	with open(os.path.dirname(__file__) + '/preferences.cfg', 'wb') as preferences:
 		config.write(preferences)
-	finally:
-		prefs_file.close()
 
 	cw.fitplot = fitplot
 	cw.ghostscript = ghostscript

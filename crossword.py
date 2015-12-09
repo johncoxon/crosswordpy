@@ -340,15 +340,16 @@ if read == []:
 	printerName = raw_input('What is the name of the printer you will be using? ')
 	username = raw_input('What is your username on this computer? ')
 	cw.preferences(printerName, username)
+else:
 
-# Read the values back out of the config file.
-printer = config.get('Printer', 'Name')
-username = config.get('Installation', 'Username')
+	# Read the values back out of the config file.
+	printer = config.get('Printer', 'Name')
+	username = config.get('Installation', 'Username')
 
-try:
-	fitplot = bool(config.get('Printer', 'fitplot'))
-	ghostscript = bool(config.get('Dependencies', 'ghostscript'))
-	pdfcrop = bool(config.get('Dependencies', 'pdfcrop'))
-	PyPDF2 = bool(config.get('Dependencies', 'PyPDF2'))
-except:
-	cw.preferences(printer, username)
+	try:
+		fitplot = bool(config.get('Printer', 'fitplot'))
+		ghostscript = bool(config.get('Dependencies', 'ghostscript'))
+		pdfcrop = bool(config.get('Dependencies', 'pdfcrop'))
+		PyPDF2 = bool(config.get('Dependencies', 'PyPDF2'))
+	except:
+		cw.preferences(printer, username)

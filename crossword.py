@@ -210,9 +210,8 @@ def crop_pdf(pdffile, pdfcrop = True, ghostscript = True):
 	else:
 		os.popen('cp {0} {1}-crop.pdf'.format(pdffile, filename))
 
-	# Expand the PDF to an A4 page.
 	if ghostscript == True:
-		gsParams = '-sDEVICE=pdfwrite -sPAPERSIZE=a4 -dFIXEDMEDIA -dPDFFitPage -dCompatibilityLevel=1.4'
+		gsParams = '-sDEVICE=pdfwrite -sPAPERSIZE=a4 -dPDFFitPage -dCompatibilityLevel=1.4'
 		os.popen('gs -o {0}-cropped.pdf {1} {0}-crop.pdf'.format(filename, gsParams))
 	else:
 		os.popen('cp {0}-crop.pdf {0}-cropped.pdf'.format(filename))
@@ -223,6 +222,31 @@ def crop_pdf(pdffile, pdfcrop = True, ghostscript = True):
 	print pdfcropped
 	return pdfcropped
 	
+#---------------------------------------------------------------------------------------------------
+
+def rotate_pdf(pdffile):
+	"""
+	Check the PDF orientation and rotate if necessary.
+	"""
+
+	if cw.pyPdf == True:
+		from pyPdf import pdf
+
+		read_pdf = pdf.PdfFileReader(file(pdffile))
+
+		dimensions = read_pdf.getPage(0).mediaBox
+
+		if dimensions[2] > dimensions[3]:
+			write_pdf = pdf.PdfFileWriter()
+			write_pdf.addPage(read_pdf.getPage(0).rotate(rotateClockwise(90)))
+			write_pdf.write(file(pdffile, 'wb'))
+			write_pdf.close()
+
+		return 0
+
+	else:
+		return 1
+
 #---------------------------------------------------------------------------------------------------
 
 def print_pdf(pdffile, landscape = False, fitplot = True):
@@ -289,7 +313,7 @@ def saturday():
 	pdfurl, _ = get_xword_url(xwordno = xwordno)
 	pdffile = download_pdf(pdfurl, saturday = True)
 	pdfcropped = crop_pdf(pdffile, pdfcrop = cw.pdfcrop, ghostscript = cw.ghostscript)
-	
+
 	# Print it, delete the extraneous bits.
 	if cw.ghostscript == True:
 		landscape = False

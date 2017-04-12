@@ -118,7 +118,7 @@ def get_xword_url(xwordno = 0):
 	"""
 
 	if xwordno == 0:
-		cw_url = 'http://www.theguardian.com/crosswords/'
+		cw_url = 'https://www.theguardian.com/crosswords/'
 		try:
 			response = urllib2.urlopen(cw_url)
 		except urllib2.HTTPError:
@@ -131,7 +131,7 @@ def get_xword_url(xwordno = 0):
 			xwordno = int(cw_html[cw_loc:cw_loc+5])
 			actualxwordno = xwordno
 
-	url = 'http://www.theguardian.com/crosswords/quick/' + str(xwordno)
+	url = 'https://www.theguardian.com/crosswords/quick/' + str(xwordno)
 	print url
 
 	try:

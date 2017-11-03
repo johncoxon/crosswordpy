@@ -12,7 +12,7 @@ import os
 import urllib2
 import ConfigParser
 import inspect
-import crossword as cw
+import crosswordpy as xw
 
 # Note that there is code at the bottom of this file, after the functions are defined, which runs
 # upon the module being imported.
@@ -44,12 +44,12 @@ def preferences(printer_name, username, fitplot = True, ghostscript = True, pdfc
 	with open(os.path.dirname(__file__) + '/preferences.cfg', 'wb') as preferences:
 		config.write(preferences)
 
-	cw.fitplot = fitplot
-	cw.ghostscript = ghostscript
-	cw.pdfcrop = pdfcrop
-	cw.PyPDF2 = PyPDF2
-	cw.printer = printer_name
-	cw.username = username
+	xw.fitplot = fitplot
+	xw.ghostscript = ghostscript
+	xw.pdfcrop = pdfcrop
+	xw.PyPDF2 = PyPDF2
+	xw.printer = printer_name
+	xw.username = username
 
 #---------------------------------------------------------------------------------------------------
 
@@ -118,17 +118,17 @@ def get_xword_url(xwordno = 0):
 	"""
 
 	if xwordno == 0:
-		cw_url = 'https://www.theguardian.com/crosswords/'
+		xw_url = 'https://www.theguardian.com/crosswords/'
 		try:
-			response = urllib2.urlopen(cw_url)
+			response = urllib2.urlopen(xw_url)
 		except urllib2.HTTPError:
-			print('Error when accessing: ' + cw_url)
+			print('Error when accessing: ' + xw_url)
 			raise
-		cw_html = response.read()
-		cw_search = 'https://www.theguardian.com/crosswords/quick/'
-		cw_loc = cw_html.find(cw_search) + len(cw_search)
-		if cw_loc != -1:
-			xwordno = int(cw_html[cw_loc:cw_loc+5])
+		xw_html = response.read()
+		xw_search = 'https://www.theguardian.com/crosswords/quick/'
+		xw_loc = xw_html.find(xw_search) + len(xw_search)
+		if xw_loc != -1:
+			xwordno = int(xw_html[xw_loc:xw_loc+5])
 			actualxwordno = xwordno
 
 	url = 'https://www.theguardian.com/crosswords/quick/' + str(xwordno)
@@ -232,7 +232,7 @@ def rotate_pdf(pdffile):
 	Check the PDF orientation and rotate if necessary.
 	"""
 
-	if cw.pyPdf == True:
+	if xw.pyPdf == True:
 		from pyPdf import pdf
 
 		read_pdf = pdf.PdfFileReader(file(pdffile))
@@ -269,7 +269,7 @@ def print_pdf(pdffile, landscape = False, fitplot = True):
 		printcmd += '-o fitplot '
 	if landscape == True:
 		printcmd += '-o landscape '
-	printcmd += '-d{0} {1}'.format(cw.printer, pdffile)
+	printcmd += '-d{0} {1}'.format(xw.printer, pdffile)
 
 	os.popen(printcmd)
 	return 1
@@ -298,10 +298,10 @@ def today():
 	# Get the PDF, download it and crop it.
 	pdfurl, _ = get_xword_url()
 	pdffile = download_pdf(pdfurl)
-	pdfcropped = crop_pdf(pdffile, pdfcrop = cw.pdfcrop, ghostscript = cw.ghostscript)
+	pdfcropped = crop_pdf(pdffile, pdfcrop = xw.pdfcrop, ghostscript = xw.ghostscript)
 
 	# Print it, delete the extraneous bits.
-	printpdf = print_pdf(pdfcropped, fitplot = cw.fitplot)
+	printpdf = print_pdf(pdfcropped, fitplot = xw.fitplot)
 	deletepdf = delete_pdf(pdffile)
 
 #---------------------------------------------------------------------------------------------------
@@ -315,15 +315,15 @@ def saturday():
 	xwordno = get_saturday_xword_no()
 	pdfurl, _ = get_xword_url(xwordno = xwordno)
 	pdffile = download_pdf(pdfurl, saturday = True)
-	pdfcropped = crop_pdf(pdffile, pdfcrop = cw.pdfcrop, ghostscript = cw.ghostscript)
+	pdfcropped = crop_pdf(pdffile, pdfcrop = xw.pdfcrop, ghostscript = xw.ghostscript)
 
 	# Print it, delete the extraneous bits.
-	if cw.ghostscript == True:
+	if xw.ghostscript == True:
 		landscape = False
 	else:
 		landscape = True
 
-	printpdf = print_pdf(pdfcropped, landscape = landscape, fitplot = cw.fitplot)
+	printpdf = print_pdf(pdfcropped, landscape = landscape, fitplot = xw.fitplot)
 	deletepdf = delete_pdf(pdffile)
 
 #---------------------------------------------------------------------------------------------------
@@ -337,21 +337,21 @@ def archive(xwordno = 0):
 	"""
 
 	# Get the next PDF, download it and crop it.
-	if xwordno == 0: xwordno = next_xword_no(cw.username)
+	if xwordno == 0: xwordno = next_xword_no(xw.username)
 	pdfurl, actualxwordno = get_xword_url(xwordno = xwordno)
 	pdffile = download_pdf(pdfurl, archive = actualxwordno)
-	pdfcropped = crop_pdf(pdffile, pdfcrop = cw.pdfcrop, ghostscript = cw.ghostscript)
+	pdfcropped = crop_pdf(pdffile, pdfcrop = xw.pdfcrop, ghostscript = xw.ghostscript)
 
 	# Work out whether the resulting file is landscape, set options accordingly.
 	# If we use ghostscript, it'll set the file rotation to 90 automatically, so the landscape
 	# keyword can be left alone; if not, use a crude method to determine landscapeness.
-	if (cw.ghostscript == False) & ((int(xwordno) - 12394) % 6 == 0):
+	if (xw.ghostscript == False) & ((int(xwordno) - 12394) % 6 == 0):
 		landscape = True
 	else:
 		landscape = False
 
 	# Print it, delete the extraneous bits.
-	printpdf = print_pdf(pdfcropped, landscape = landscape, fitplot = cw.fitplot)
+	printpdf = print_pdf(pdfcropped, landscape = landscape, fitplot = xw.fitplot)
 	deletepdf = delete_pdf(pdffile)
 
 #---------------------------------------------------------------------------------------------------
@@ -366,7 +366,7 @@ if read == []:
 	# Ask the user to set up the preferences.
 	printer_name = raw_input('What is the name of the printer you will be using? ')
 	username = raw_input('What is your username on this computer? ')
-	cw.preferences(printer_name, username)
+	xw.preferences(printer_name, username)
 else:
 
 	# Read the values back out of the config file.
@@ -379,4 +379,4 @@ else:
 		pdfcrop = bool(config.get('Dependencies', 'pdfcrop'))
 		PyPDF2 = bool(config.get('Dependencies', 'PyPDF2'))
 	except:
-		cw.preferences(printer, username)
+		xw.preferences(printer, username)

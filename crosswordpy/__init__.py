@@ -7,6 +7,7 @@ Based on a Python script written by Jonny Nichols (University of Leicester) in t
 Author:	John Coxon, Space Environment Physics group, University of Southampton
 Date:	2015/02/27
 """
+
 import datetime as dt
 import os
 import urllib2
@@ -356,27 +357,35 @@ def archive(xwordno = 0):
 
 #---------------------------------------------------------------------------------------------------
 
-# This stuff is at the bottom bceause it needs to run on import but after the functions have been
-# defined so that the preferences function can be called.
 
-config = ConfigParser.SafeConfigParser()
-read = config.read(os.path.dirname(__file__) + '/preferences.cfg')
+def run():
+	# This stuff is at the bottom bceause it needs to run on import but after the functions have been
+	# defined so that the preferences function can be called.
 
-if read == []:
-	# Ask the user to set up the preferences.
-	printer_name = raw_input('What is the name of the printer you will be using? ')
-	username = raw_input('What is your username on this computer? ')
-	xw.preferences(printer_name, username)
+	config = ConfigParser.SafeConfigParser()
+	read = config.read(os.path.dirname(__file__) + '/preferences.cfg')
+
+	if read == []:
+		# Ask the user to set up the preferences.
+		printer_name = raw_input('What is the name of the printer you will be using? ')
+		username = raw_input('What is your username on this computer? ')
+		xw.preferences(printer_name, username)
+	else:
+
+		# Read the values back out of the config file.
+		printer = config.get('Printer', 'Name')
+		username = config.get('Installation', 'Username')
+
+		try:
+			fitplot = bool(config.get('Printer', 'fitplot'))
+			ghostscript = bool(config.get('Dependencies', 'ghostscript'))
+			pdfcrop = bool(config.get('Dependencies', 'pdfcrop'))
+			PyPDF2 = bool(config.get('Dependencies', 'PyPDF2'))
+		except:
+			xw.preferences(printer, username)
+	pass
+
+if __name__ == "__main__":
+	run()
 else:
-
-	# Read the values back out of the config file.
-	printer = config.get('Printer', 'Name')
-	username = config.get('Installation', 'Username')
-
-	try:
-		fitplot = bool(config.get('Printer', 'fitplot'))
-		ghostscript = bool(config.get('Dependencies', 'ghostscript'))
-		pdfcrop = bool(config.get('Dependencies', 'pdfcrop'))
-		PyPDF2 = bool(config.get('Dependencies', 'PyPDF2'))
-	except:
-		xw.preferences(printer, username)
+	pass

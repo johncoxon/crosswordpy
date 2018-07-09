@@ -10,13 +10,16 @@ Date:	2015/02/27
 
 import datetime as dt
 import os
-import urllib2
-import ConfigParser
 import inspect
 import crosswordpy as xw
 
-# Note that there is code at the bottom of this file, after the functions are defined, which runs
-# upon the module being imported.
+# For 2to3 compatibility.
+try:
+	from urllib2 import urlopen, HTTPError
+	from ConfigParser import SafeConfigParser
+except ImportError:
+	from urllib.request import urlopen, HTTPError
+	from configparser import SafeConfigParser
 
 #---------------------------------------------------------------------------------------------------
 
@@ -26,7 +29,7 @@ def preferences(printer_name, username, fitplot = True, ghostscript = True, pdfc
 	Saves user preferences connected to dependencies, the name and features of the desired printer,
 	and the username of the user (for use in recording crossword progress).
 	"""
-	config = ConfigParser.SafeConfigParser()
+	config = SafeConfigParser()
 
 	# Set up the printer preferences.
 	config.add_section('Printer')
@@ -121,8 +124,8 @@ def get_xword_url(xwordno = 0):
 	if xwordno == 0:
 		xw_url = 'https://www.theguardian.com/crosswords/'
 		try:
-			response = urllib2.urlopen(xw_url)
-		except urllib2.HTTPError:
+			response = urlopen(xw_url)
+		except HTTPError:
 			print('Error when accessing: ' + xw_url)
 			raise
 		xw_html = response.read()
@@ -133,11 +136,11 @@ def get_xword_url(xwordno = 0):
 			actualxwordno = xwordno
 
 	url = 'https://www.theguardian.com/crosswords/quick/' + str(xwordno)
-	print url
+	print(url)
 
 	try:
-		response = urllib2.urlopen(url)
-	except urllib2.HTTPError:
+		response = urlopen(url)
+	except HTTPError:
 		print('Error when accessing: ' + url)
 		raise
 
@@ -181,7 +184,7 @@ def download_pdf(pdfurl, saturday = False, archive = False):
 		archive: Set this to download an old crossword.
 	"""
 
-	response = urllib2.urlopen(pdfurl)
+	response = urlopen(pdfurl)
 	if saturday != False:
 		filename = '/saturday.pdf'
 	elif archive != False:
@@ -223,7 +226,7 @@ def crop_pdf(pdffile, pdfcrop = True, ghostscript = True):
 	# Return the new filename.
 	pdfcropped = '{0}-cropped.pdf'.format(filename)
 
-	print pdfcropped
+	print(pdfcropped)
 	return pdfcropped
 
 #---------------------------------------------------------------------------------------------------
@@ -362,7 +365,7 @@ def run():
 	# This stuff is at the bottom bceause it needs to run on import but after the functions have been
 	# defined so that the preferences function can be called.
 
-	config = ConfigParser.SafeConfigParser()
+	config = SafeConfigParser()
 	read = config.read(os.path.dirname(__file__) + '/preferences.cfg')
 
 	if read == []:
